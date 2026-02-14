@@ -1,0 +1,151 @@
+# AGENIUM — Agent-to-Agent Communication SDK (Python)
+
+[![PyPI version](https://badge.fury.io/py/agenium.svg)](https://pypi.org/project/agenium/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Local, stateful agent-to-agent communication using the `agent://` protocol.
+
+## Quick Start
+
+```bash
+pip install agenium
+```
+
+### Create an Agent
+
+```python
+import asyncio
+from agenium import Agent
+
+async def main():
+    # Create and start an agent
+    agent = Agent("my-agent")
+    
+    # Register a tool
+    @agent.tool("greet", description="Greet someone")
+    async def greet(name: str) -> str:
+        return f"Hello, {name}! I'm {agent.name}."
+    
+    # Start listening
+    await agent.start(port=8443)
+    
+    # Register on the AGENIUM DNS
+    await agent.register(api_key="dom_your_key_here")
+    
+    print(f"Agent running at agent://{agent.name}")
+
+asyncio.run(main())
+```
+
+### Connect to an Agent
+
+```python
+import asyncio
+from agenium import Agent
+
+async def main():
+    agent = Agent("client-agent")
+    await agent.start()
+    
+    # Resolve and connect
+    session = await agent.connect("agent://my-agent")
+    
+    # Call a remote tool
+    result = await agent.call_tool(session.id, "greet", {"name": "World"})
+    print(result)  # "Hello, World! I'm my-agent."
+    
+    # Send a message
+    await agent.send(session.id, "ping", {"data": "hello"})
+    
+    await agent.stop()
+
+asyncio.run(main())
+```
+
+### DNS Resolution
+
+```python
+from agenium.dns import DNSResolver
+
+resolver = DNSResolver()
+agent = await resolver.resolve("my-agent")
+print(agent.endpoint)  # https://1.2.3.4:8443
+print(agent.tools)     # [Tool(name='greet', ...)]
+```
+
+## Features
+
+- **`agent://` Protocol** — URI-based agent addressing (`agent://name`)
+- **DNS Resolution** — Automatic agent discovery via AGENIUM DNS (185.204.169.26)
+- **Stateful Sessions** — Persistent sessions with SQLite storage
+- **Tool System** — Register/invoke tools across agents
+- **mTLS Security** — Mutual TLS with auto-generated certificates
+- **Capability Manifest** — Agents advertise their tools in DNS
+- **Async-First** — Built on `asyncio` and `httpx`
+
+## Architecture
+
+```
+┌──────────┐     agent://name     ┌──────────┐
+│  Agent A  │ ──────────────────> │  DNS      │
+│           │ <────────────────── │  Server   │
+│  (client) │   endpoint + tools  │           │
+└─────┬─────┘                     └───────────┘
+      │
+      │  mTLS + HTTP/2
+      ▼
+┌──────────┐
+│  Agent B  │
+│  (server) │
+│  :8443    │
+└──────────┘
+```
+
+## API Reference
+
+### `Agent(name, config=None)`
+
+Create an agent instance.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | required | Agent name (2-50 chars, lowercase) |
+| `config` | `AgentConfig` | `None` | Optional configuration |
+
+### Key Methods
+
+| Method | Description |
+|--------|-------------|
+| `agent.start(port=8443)` | Start the agent server |
+| `agent.stop()` | Gracefully shutdown |
+| `agent.register(api_key)` | Register on AGENIUM DNS |
+| `agent.connect(uri)` | Connect to another agent |
+| `agent.send(session_id, event, data)` | Send event to session |
+| `agent.call_tool(session_id, tool, params)` | Invoke remote tool |
+| `agent.tool(name, ...)` | Decorator to register a tool |
+
+### `DNSResolver(server=None)`
+
+Resolve `agent://` URIs.
+
+| Method | Description |
+|--------|-------------|
+| `resolver.resolve(name)` | Resolve agent name to endpoint |
+| `resolver.resolve_uri(uri)` | Resolve full `agent://` URI |
+
+## Compatibility
+
+This is the official Python SDK for [AGENIUM](https://agenium.net). It's fully compatible with the [Node.js SDK](https://www.npmjs.com/package/agenium) (`npm install agenium`).
+
+## Links
+
+- **Website:** https://agenium.net
+- **Docs:** https://docs.agenium.net
+- **GitHub:** https://github.com/Aganium/agenium-python
+- **npm (Node.js):** https://www.npmjs.com/package/agenium
+- **Discord:** Coming soon
+
+## License
+
+MIT © AGENIUM

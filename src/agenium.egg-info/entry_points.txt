@@ -1,0 +1,2 @@
+[console_scripts]
+agenium = agenium.cli:main
